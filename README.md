@@ -1,4 +1,4 @@
-# Portafolio_implementacion
+# Portafolio implementacion
 *Inteligencia artificial avanzada para la ciencia de datos I - Portafolio de implementación individual*
 
 **María Fernanda Torres Alcubilla A01285041**
