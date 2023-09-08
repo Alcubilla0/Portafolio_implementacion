@@ -1,0 +1,247 @@
+---
+title: "Modelo estadístico - Portafolio implementación"
+author: "María Fernanda Torres Alcubilla A01285041"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+---
+Nuestra base de datos resultante del análisis anterior cuenta con 6 atributos y un atributo de salida, los cuales son los que cuentan con mayor correlación con nuestro resultado, el precio del automovil. Cuatro atributos de estos son numéricos y dos de ellos categóricos, a continuación, se describen los atributos:
+- enginesize (numérica): tamaño del carro
+- curbweight (numérica): peso del carro sin pasajero o equipaje
+- horsepower (numérica): caballos de fuerza
+- highwaympg (numérica): millaje en carretera
+- cylindernumber (categórica): cilindros colocados en el carro
+- drivewheel (categórica): tipo de rueda motriz
+Estos datos ya fueron discretizados y normalizados en la entrega anterior para evitar sesgos en las variables, además se realizó un análisis de datos atípicos para observar su comportamiento y tomar decisiones respecto a estos. 
+```{r}
+M = read.csv("/Users/fernandaalcubilla/Downloads/carros_final.csv")
+summary(M)
+num = subset(M, select = - drivewheel)
+```
+# Regresión múltiple
+## Modelo con interacción
+### Correlación
+En esta matriz de correlaciones podemos observar que las siguientes variables independientes tienen una correlación muy fuerte entre (|r|≥0.85):
+- enginesize y curbweight
+- highwaympg y horsepower
+Por lo que estas relaciones se considerarán para definir las interacciones en nuestro modelo.
+```{r}
+num = subset(M, select = - drivewheel)
+round(cor(num),2)
+```
+
+### Modelo 1
+H0: Hay interacción entre horsepower y highwaympg
+H1: No hay interacción
+
+Se rechaza H0 si su p-value es mayor a 0.03 
+Observamos que nuestro p-value es menor a este valor, por lo que no hay razones suficientes para rechazar H0 y decimos qeu hay interacción entre estas variables.
+Sin embargo, observamos que el p-value de la variable Cylindernumber es mayor a 0.03, por lo que no hay efecto de interacción de esta variable y el siguiente modelo se creará sin esta. 
+```{r}
+B = lm(M$price~M$cylindernumber+M$enginesize*M$curbweight+M$horsepower*M$highwaympg)
+B
+summary(B)
+```
+### Modelo 2
+H0: Hay interacción entre enginesize y curbweight
+H1: No hay interacción
+
+Se rechaza H0 si su p-value es mayor a 0.03 
+Con nuestro nuevo modelo eliminando la variable cylindernumber, se obtiene que para esta interacción hay un p-value < 0.03, por lo que si hay efecto de interacción entre enginesize y curbweight.
+De igual manera, observamos que la variable de highwaympg no es siginficativa, sin embargo, se debe mantener ya que en nuestro modelo, está involucrada en una interacción. 
+```{r}
+B2 = lm(M$price~M$enginesize*M$curbweight+M$horsepower*M$highwaympg)
+B2
+summary(B2)
+```
+### Modelo final
+Por lo que nuestro modelo final con interacción se ve de la siguiente manera:
+```{r}
+cat("price =",
+    B2$coefficients[1],"+",
+    B2$coefficients[2],"enginesize +",
+    B2$coefficients[3],"curbweight +",
+    B2$coefficients[4],"horsepower",
+    B2$coefficients[5],"highwaympg +",
+    B2$coefficients[6],"enginesize*curbweight",
+    B2$coefficients[7],"horsepower*highwaympg")
+```
+
+Obtenemos un R ajustado de 0.803 y observamos que la interacción de horsepower y highwaympg y esta última variable por si sola, tienen un efecto negativo sobre el precio.
+
+## Modelo sin interacción
+En esta sección se consideran todas las variables sin interacción.
+### Modelo 1
+Observamos que la variable Enginesize es la menos significativa y su p-value > 0.03, por lo que se decide eliminar esta variable.
+```{r}
+A = lm(M$price~M$enginesize+M$curbweight+M$horsepower+M$highwaympg+M$cylindernumber)
+A
+summary(A)
+```
+
+### Modelo 2
+Ya eliminando enginesize, se observa que la variable highway de igual manera no es significativa con un p-value > 0.03, por lo que se elimina esta. 
+```{r}
+A2 = lm(M$price~M$curbweight+M$horsepower+M$highwaympg+M$cylindernumber)
+A2
+summary(A2)
+```
+
+### Modelo 3
+En este modelo observamos que todas las variables son significativas, por lo que resulta un modelo con 3 variabels independientes.
+```{r}
+A3 = lm(M$price~M$curbweight+M$horsepower+M$cylindernumber)
+A3
+summary(A3)
+```
+### Modelo final
+Por lo que nuestro modelo final se ve de la siguiente manera:
+```{r}
+cat("price =",
+    A3$coefficients[1],"+",
+    A3$coefficients[2],"curbweight +",
+    A3$coefficients[3],"horsepower +",
+    A3$coefficients[4],"cylindernumber")
+```
+
+Obtenemos un R ajustado de 0.72 y observamos que todas las variables tienen un efecto positivo con el precio, donde el curbweight es el que mayor peso tiene en este.
+## Resumen de modelos 
+Se obtuvieron dos modelos, con y sin interacción, con un R ajustado de 0.80 y 0.72 respectivamente. El primer modelo toma en consideración las siguientes variables y sus interacciones: enginesize, curbweight, horsepower, highwaympg, enginesize con curbweight y horsepower con highwaympg.
+
+El segundo modelo considera las siguientes variables: curbweight, horsepower, cylindernumber
+
+Se decide trabajar con ambos modelos para hacer sus validaciones.
+
+# Validez del modelo con interacción
+En este apartado se realizará la validez del modelo en la regresión lineal con un alfa de 0.03, donde se hará un análisis de los residuos incluyendo lo siguiente:
+- los residuos se distribuyen como una normal
+- la media de los residuos es cero
+- los residuos tienen homocedasticidad
+- los residuos son idnependientes
+## Normalidad en los residuos
+H0: los datos provienen de una población normal
+H1: los datos no provienen de una población normal
+
+Regla de decisión: se rechaza H0 si p-value < alfa
+
+Se aplicó el test de Anderson Darling, en este obtuvimos un p-value menor que nuestro alfa por lo que con un nivel de significancia de 0.03, rechazamos H0 y podemos decir que nuestros datos no provienen de una distribución normal. 
+
+Además, en la gráfica qqplot observamos nuestros residuos como los puntos y la linea recta como el comportamiento normal, nuestros residuos no tienen una distribución en las colas, su comportamiento lo observamos en la gráfica del siguiente apartado.
+```{r}
+library(nortest)
+ad.test(B2$residuals)
+
+qqnorm(B2$residuals)
+qqline(B2$residuals)
+```
+
+La curva azul es la teórica de la normalidad y la roja la de nuestros residuos. Observamos una gran diferencia en nuestros residuos con la normal. Lo que nos ayuda a visualizar el rechazo de la normalidad. Además observamos la forma leptocúrtica ya que está más alargada que la distribución normal.
+```{r}
+hist(B2$residuals,freq=FALSE, ylim = c(0,1.766e-04), xlab = 'Residuos', col = 0)
+lines(density(B2$residuals),col="red")
+curve(dnorm(x,mean=mean(B2$residuals),sd=sd(B2$residuals)), from=min(B2$residuals),
+to=max((B2$residuals)), add=TRUE, col="blue",lwd=2)
+```
+## Media de los errores
+H0. residuos con media = 0
+H1. residuos con media diferente a 0
+
+Regla de decisión. se rechaza H0 si p-value < alfa
+
+Se aplica una prueba de hipótesis t-Student para medias. En el t-test se observa que considerando un alfa de 0.03, p-value (1) > 0.03, por lo que no hay pruebas suficientes para rechazar H0. Por lo que los residuos tienen media cero. 
+```{r}
+t.test(B2$residuals)
+```
+## Homocedasticidad e independencia
+H0: nuestros datos presentan homocedasticidad
+H1: nuestros datos no presentan homocedasticidad
+
+Regla de decisión. se rechaza H0 si p-value < alfa
+
+Nuestro resultado de p-value es menor que alfa (0.03), por lo que se rechaza la homocedasticidad y se puede concluír que nuestros datos presentan heterocedasticidad
+```{r}
+library(car)
+ncvTest(B2)
+```
+
+En nuestra gráfica de residuos y valores ajustados, no observamos homocedasticidad ya que en el lado izquierdo podemos observar una mayor densidad de puntos que del lado derecho, además, estos tienden a abrirse mientras mayor sea el valor ajustado, por lo que se presenta simetría. Por lo tanto, debido a la ausencia de sesgo decimos que nuestros datos no presentan independencia.
+```{r}
+plot(B2$fitted.values, B2$residuals)
+abline(h=0, col = "blue")
+```
+# Validez del modelo sin interacción
+## Normalidad en los residuos
+H0: los datos provienen de una población normal
+H1: los datos no provienen de una población normal
+
+Regla de decisión: se rechaza H0 si p-value < alfa
+
+Se aplicó el test de Anderson Darling, en este obtuvimos un p-value menor que nuestro alfa por lo que con un nivel de significancia de 0.03, rechazamos H0 y podemos decir que nuestros datos no provienen de una distribución normal. 
+
+Además, en la gráfica qqplot observamos nuestros residuos como los puntos y la linea recta como el comportamiento normal, nuestros residuos no tienen una distribución normal en las colas, su comportamiento lo observamos en la gráfica del siguiente apartado.
+```{r}
+library(nortest)
+ad.test(A3$residuals)
+
+qqnorm(A3$residuals)
+qqline(A3$residuals)
+```
+
+La curva azul es la teórica de la normalidad y la roja la de nuestros residuos. Observamos una gran diferencia en nuestros residuos con la normal. Lo que nos ayuda a visualizar el rechazo de la normalidad. Además observamos la forma leptocúrtica ya que está más alargada que la distribución normal y observamos un sesgo negativo.
+```{r}
+hist(A3$residuals,freq=FALSE, ylim = c(0,1.766e-04), xlab = 'Residuos', col = 0)
+lines(density(A3$residuals),col="red")
+curve(dnorm(x,mean=mean(A3$residuals),sd=sd(A3$residuals)), from=min(A3$residuals),
+to=max((A3$residuals)), add=TRUE, col="blue",lwd=2)
+```
+## Media de los errores
+H0. residuos con media = 0
+H1. residuos con media diferente a 0
+
+Regla de decisión. se rechaza H0 si p-value < alfa
+
+Se aplica una prueba de hipótesis t-Student para medias. En el t-test se observa que considerando un alfa de 0.03, p-value (1) > 0.03, por lo que no hay pruebas suficientes para rechazar H0. Por lo que los residuos tienen media cero. 
+```{r}
+t.test(A3$residuals)
+```
+## Homocedasticidad e independencia
+H0: nuestros datos presentan homocedasticidad
+H1: nuestros datos no presentan homocedasticidad
+
+Regla de decisión. se rechaza H0 si p-value < alfa
+
+Nuestro resultado de p-value es menor que alfa (0.03), por lo que se rechaza la homocedasticidad y se puede concluír que nuestros datos presentan heterocedasticidad
+```{r}
+library(car)
+ncvTest(A3)
+```
+
+En nuestra gráfica de residuos y valores ajustados, no observamos homocedasticidad ya que en el lado izquierdo podemos observar una mayor densidad de puntos que del lado derecho, además, estos tienden a la forma de parábola postiva, lo que indica un sesgo. Por lo tanto, debido al sesgo decimos que nuestros datos, además de heterocedasticidad, presentan independencia.
+```{r}
+plot(A3$fitted.values, A3$residuals)
+abline(h=0, col = "blue")
+```
+
+# Conclusiones
+En resumen, la validación del modelo 1 tuvo los siguientes resultados:
+- Los datos no provienen de una distribución normal
+- Los residuos tienen media 0
+- Los datos tienen heterocedasticidad y dependencia
+
+Y el modelo 2:
+- Los datos no provienen de una distribución normal
+- Los residuos tienen media 0
+- Los datos tienen heterocedasticidad e independencia
+
+Ninguno de los dos modelos cumple con todos los supuestos para la regresión lineal, por lo que se concluye que no son modelos aptos. 
+Sin embargo, se escogerá el modelo sin interacción ya que este en las pruebas de hipótesis cumplió con la independencia, teniendo más supuestos aceptados que el modelo con interacción. Aunque este tenga un R^2 un poco menor que al modelo con interacción
+
+# Análisis posterior modelo sin interacción
+Para el mejoramiento de nuestro modelo se desea observar si hay datos influyentes que nos están perjudicadno. Se consideraría influyente si la distancia de Cook > 1. Podemos observar que la mayor distancia es 0.26, por lo que ningún dato es influyente y nuestro modelo no puede ser mejorado. 
+```{r}
+I = influence.measures(A3)
+summary(I)
+```
+
+En conclusión, nuestro modelo no cumple con todos los supuestos y tiene un R^2 de 0.72, se considera un modelo bueno en cuanto a este último valor, sin embargo, no puede ser tan confiable debido a su falta de aceptación de la mayoría de los supuestos. 
