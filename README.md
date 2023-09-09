@@ -11,5 +11,6 @@ En el archivo [Regresión sin framework](Regresión_sin_framework.ipynb) se encu
 
 Por otro lado, en el archivo [Regresión con framework](Regresión_con_framework.ipynb) se implementó este mismo modelo, pero con el uso de la librería *sklearn*, donde de igual manera se crea, entrena y evalúa su desemepeño en un set de datos. Además, se realiza una comparación entre ambos modelos.
 
-Cambios implementados
+***Cambios implementados***
+
 Tanto para el documento de [Regresión sin framework](Regresión_sin_framework.ipynb) como el de [Regresión con framework](Regresión_con_framework.ipynb), se implementaron cambios de descripción de datos, secciones, proceso y métricas de evaluación. 
